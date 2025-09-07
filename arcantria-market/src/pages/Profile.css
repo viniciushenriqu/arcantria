@@ -1,0 +1,53 @@
+.profile-content {
+  margin-top: 60px; /* compensação da topbar */
+  padding: 2rem;
+  background-color: #121212;
+  min-height: 100vh;
+  color: white;
+}
+
+.profile-content h1 {
+  margin-bottom: 2rem;
+  color: white;
+  font-size: 24px;
+  padding-left: 40px; 
+}
+
+.inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 30px;
+  max-width: 1000px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 40px; 
+}
+
+.inventory-card {
+  background-color: #6c63ff;
+  padding: 40px 20px;
+  border-radius: 12px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 16px;
+  transition: background-color 0.3s ease;
+  height: 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.inventory-card:hover {
+  background-color: #574fd6;
+}
+
+.item-icon {
+  font-size: 28px;
+  margin-bottom: 10px;
+}
+
+.item-name {
+  font-size: 16px;
+}
