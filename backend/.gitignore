@@ -1,0 +1,22 @@
+# Ambiente virtual
+venv/
+
+# Cache do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Banco de dados SQLite (caso use em dev)
+*.sqlite3
+
+# Configurações locais
+.env
+
+# Logs
+*.log
+
+# Arquivos temporários
+.DS_Store
+.idea/
+.vscode/
