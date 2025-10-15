@@ -1,79 +1,101 @@
-import React, { useState } from 'react';
-import Topbar from '../components/Topbar';
-import './Marketplace.css';
-
-const categorias = [
-  { id: 1, nome: 'Armas', emoji: '🗡️' },
-  { id: 2, nome: 'Armaduras', emoji: '🛡️' },
-  { id: 3, nome: 'Poções', emoji: '🧪' },
-  { id: 4, nome: 'Magias', emoji: '✨' },
-];
-
-const itens = [
-  { id: 1, nome: 'Espada de Aço', categoria: 'Armas', preco: 100 },
-  { id: 2, nome: 'Machado Orc', categoria: 'Armas', preco: 150 },
-  { id: 3, nome: 'Armadura de Couro', categoria: 'Armaduras', preco: 200 },
-  { id: 4, nome: 'Poção de Cura', categoria: 'Poções', preco: 50 },
-  { id: 5, nome: 'Poção de Mana', categoria: 'Poções', preco: 60 },
-  { id: 6, nome: 'Bola de Fogo', categoria: 'Magias', preco: 300 },
-];
+import React, { useState, useEffect, useContext } from "react";
+import { useNavigate } from "react-router-dom";
+import Topbar from "../components/Topbar";
+import { WalletContext } from "../context/WalletContext";
+import { productsAPI, ordersAPI, balanceAPI } from "../services/api";
+import "./Marketplace.css";
 
 function Marketplace() {
-  const [categoriaSelecionada, setCategoriaSelecionada] = useState(null);
-  const [itemSelecionado, setItemSelecionado] = useState(null);
+  const navigate = useNavigate();
+  const { user } = useContext(WalletContext);
+  const [products, setProducts] = useState([]);
+  const [balance, setBalance] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const itensFiltrados = categoriaSelecionada
-    ? itens.filter((item) => item.categoria === categoriaSelecionada)
-    : [];
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [productsResponse, balanceResponse] = await Promise.all([
+        productsAPI.getProducts(),
+        balanceAPI.getBalance()
+      ]);
+
+      setProducts(productsResponse.data);
+      setBalance(balanceResponse.data.balance);
+    } catch (err) {
+      setError('Erro ao carregar dados');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBuy = async (product) => {
+    if (balance < product.price) {
+      alert('Saldo insuficiente!');
+      return;
+    }
+
+    try {
+      // Criar order
+      const orderData = {
+        product: product.id,
+        quantity: 1,
+        total_price: product.price
+      };
+
+      const orderResponse = await ordersAPI.createOrder(orderData);
+      const order = orderResponse.data;
+
+      // Pagar order
+      await ordersAPI.payOrder(order.id);
+
+      // Recarregar dados
+      await loadData();
+
+      alert('Compra realizada com sucesso!');
+    } catch (err) {
+      alert('Erro na compra: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  if (loading) return <div>Carregando...</div>;
+  if (error) return <div>Erro: {error}</div>;
 
   return (
     <>
       <Topbar />
       <div className="marketplace-content">
         <h1>Marketplace</h1>
-
-        {/* Categorias */}
-        <div className="categoria-row">
-          {categorias.map((cat) => (
-            <button
-              key={cat.id}
-              className={`categoria-btn ${categoriaSelecionada === cat.nome ? 'ativa' : ''}`}
-              onClick={() => {
-                setCategoriaSelecionada(cat.nome);
-                setItemSelecionado(null);
-              }}
-            >
-              <span className="categoria-emoji">{cat.emoji}</span> {cat.nome}
-            </button>
+        <div className="balance-info">
+          <p>Saldo: {balance} ARK</p>
+        </div>
+        <div className="itens-grid">
+          {products.map((product) => (
+            <div className="item-card-modern" key={product.id}>
+              <div className="item-image">
+                <img src={`/assets/${product.name.toLowerCase().replace(/\s+/g, '')}.png`} alt={product.name} />
+              </div>
+              <h2>{product.name}</h2>
+              <p className="item-preco">{product.price} Ark</p>
+              <p className="item-descricao">{product.description}</p>
+              <button onClick={() => navigate(`/item/${product.id}`)} className="buy-btn-modern">Detalhes</button>
+              <button
+                onClick={() => handleBuy(product)}
+                className="buy-btn-modern"
+                style={{ marginTop: '10px' }}
+                disabled={balance < product.price}
+              >
+                Comprar
+              </button>
+            </div>
           ))}
         </div>
-
-        {/* Itens */}
-        {categoriaSelecionada && (
-          <div className="itens-grid">
-            {itensFiltrados.map((item) => (
-              <div
-                key={item.id}
-                className="item-card"
-                onClick={() => setItemSelecionado(item)}
-              >
-                {item.nome}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Modal de compra */}
-        {itemSelecionado && (
-          <div className="item-modal">
-            <div className="item-modal-content">
-              <h2>{itemSelecionado.nome}</h2>
-              <p>Preço: {itemSelecionado.preco} Gold</p>
-              <button className="buy-btn">Comprar</button>
-              <button className="close-btn" onClick={() => setItemSelecionado(null)}>Fechar</button>
-            </div>
-          </div>
-        )}
       </div>
     </>
   );

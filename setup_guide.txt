@@ -1,0 +1,138 @@
+PASSO A PASSO PARA CONFIGURAR O APLICATIVO ARCANTRIA MARKET
+
+Este guia assume que você está usando Windows e tem o MySQL instalado.
+
+1. INSTALAÇÃO DO BACKEND (Django)
+
+1.1 Instalar Python (se não tiver)
+   - Baixe Python 3.8+ de https://www.python.org/downloads/
+   - Durante instalação, marque "Add Python to PATH"
+
+1.2 Criar ambiente virtual
+   cd backend/arcantria_api
+   python -m venv venv
+   venv\Scripts\activate
+
+1.3 Instalar dependências
+   pip install -r requirements.txt
+
+   Se não existir requirements.txt, instale manualmente:
+   pip install django djangorestframework djangorestframework-simplejwt mysqlclient corsheaders
+
+1.4 Configurar banco de dados MySQL
+   - Certifique-se que o MySQL está rodando
+   - Crie o banco de dados: CREATE DATABASE arcantria_db;
+   - Verifique as credenciais em backend/arcantria_api/arcantria_api/settings.py
+     DATABASES = {
+         'default': {
+             'ENGINE': 'django.db.backends.mysql',
+             'NAME': 'arcantria_db',
+             'USER': 'Manthega',  # seu usuário MySQL
+             'PASSWORD': 'M@nthega4540',  # sua senha MySQL
+             'HOST': 'localhost',
+             'PORT': '3306',
+         }
+     }
+
+1.5 Executar migrações
+   python manage.py makemigrations
+   python manage.py migrate
+
+1.6 Criar superusuário (opcional)
+   python manage.py createsuperuser
+
+1.7 Rodar servidor backend
+   python manage.py runserver
+
+2. INSTALAÇÃO DO FRONTEND (React)
+
+2.1 Instalar Node.js (se não tiver)
+   - Baixe de https://nodejs.org/
+
+2.2 Instalar dependências
+   cd arcantria-market
+   npm install
+
+2.3 Configurar variáveis de ambiente (opcional)
+   - Crie arquivo .env na pasta arcantria-market
+   - Adicione: REACT_APP_API_URL=http://localhost:8000/api
+
+2.4 Rodar servidor frontend
+   npm start
+
+3. CONFIGURAÇÕES ADICIONAIS
+
+3.1 Instalar MetaMask
+   - Baixe extensão do Chrome/Firefox: https://metamask.io/
+
+3.2 Configurar CORS (já configurado)
+   - O backend já tem CORS_ALLOW_ALL_ORIGINS = True
+
+3.3 Verificar portas
+   - Backend: http://localhost:8000
+   - Frontend: http://localhost:3000
+
+4. TESTANDO A APLICAÇÃO
+
+4.1 Abrir navegador em http://localhost:3000
+4.2 Clicar em "Conectar com MetaMask"
+4.3 Aprovar conexão na MetaMask
+4.4 Deve redirecionar para marketplace
+
+5. POSSÍVEIS PROBLEMAS E SOLUÇÕES
+
+5.1 Erro de conexão MySQL
+   - Verificar se MySQL está rodando
+   - Verificar credenciais em settings.py
+   - Instalar mysqlclient: pip install mysqlclient
+
+5.2 Erro de CORS
+   - Verificar se CORS_ALLOW_ALL_ORIGINS = True em settings.py
+
+5.3 Erro de JWT
+   - Verificar se djangorestframework-simplejwt está instalado
+   - Verificar se está em INSTALLED_APPS
+
+5.4 MetaMask não conecta
+   - Verificar se extensão está instalada
+   - Verificar se está na rede correta (mainnet/testnet)
+
+6. ESTRUTURA DO PROJETO
+
+arcantria-market/          # Frontend React
+backend/arcantria_api/     # Backend Django
+├── accounts/             # App de contas/usuários
+├── products/             # App de produtos
+├── orders/               # App de pedidos
+└── arcantria_api/        # Configurações principais
+
+7. ENDPOINTS DA API
+
+- POST /api/auth/login-wallet/ - Login com wallet
+- GET /api/users/me/ - Dados do usuário
+- GET /api/products/ - Lista produtos
+- GET /api/balance/ - Saldo do usuário
+- POST /api/orders/ - Criar pedido
+- POST /api/orders/{id}/pay/ - Pagar pedido
+
+8. COMANDOS ÚTEIS
+
+Backend:
+- python manage.py runserver
+- python manage.py makemigrations
+- python manage.py migrate
+- python manage.py shell
+
+Frontend:
+- npm start
+- npm run build
+- npm test
+
+9. DEPLOYMENT (opcional)
+
+Para produção:
+- Configurar DEBUG = False
+- Configurar ALLOWED_HOSTS
+- Usar HTTPS
+- Configurar banco de produção
+- Build do React: npm run build

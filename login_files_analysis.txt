@@ -1,0 +1,354 @@
+=== ARQUIVOS RESPONSÁVEIS PELO SISTEMA DE LOGIN COM METAMASK ===
+
+Este arquivo contém a análise completa dos arquivos envolvidos no sistema de login com MetaMask.
+Cada arquivo está separado por nome e contém sua funcionalidade, código relevante e papel no fluxo de autenticação.
+
+================================================================================
+ARQUIVO: arcantria-market/src/pages/Login.js
+================================================================================
+
+FUNÇÃO: Componente principal da página de login que gerencia a conexão com MetaMask
+
+CÓDIGO PRINCIPAL:
+```javascript
+const connectWallet = async () => {
+  try {
+    if (!window.ethereum) {
+      setError('Por favor, instale a MetaMask!');
+      return;
+    }
+
+    const provider = new ethers.BrowserProvider(window.ethereum);
+
+    // Verificar se MetaMask está desbloqueada
+    try {
+      await provider.send('eth_accounts', []);
+    } catch (unlockError) {
+      setError('Por favor, desbloqueie sua carteira MetaMask primeiro.');
+      return;
+    }
+
+    const accounts = await provider.send('eth_requestAccounts', []);
+
+    if (accounts.length === 0) {
+      setError('Nenhuma conta conectada. Por favor, conecte uma conta na MetaMask.');
+      return;
+    }
+
+    const address = accounts[0];
+
+    // Fazer login via API
+    const result = await login(address);
+
+    if (result.success) {
+      setError(null);
+      navigate('/marketplace');
+    } else {
+      setError(result.error);
+    }
+  } catch (err) {
+    console.error('Erro detalhado:', err);
+    if (err.code === 4001) {
+      setError('Conexão rejeitada pelo usuário. Por favor, aceite a conexão na MetaMask.');
+    } else if (err.code === -32002) {
+      setError('Uma solicitação de conexão já está pendente. Verifique sua MetaMask.');
+    } else {
+      setError('Erro ao conectar a carteira: ' + (err.message || 'Erro desconhecido'));
+    }
+  }
+};
+```
+
+PAPEL NO FLUXO: Ponto de entrada do usuário, conecta com MetaMask e inicia o processo de login
+
+================================================================================
+ARQUIVO: arcantria-market/src/context/WalletContext.js
+================================================================================
+
+FUNÇÃO: Contexto React que gerencia o estado global da autenticação e carteira
+
+CÓDIGO PRINCIPAL:
+```javascript
+const login = async (address) => {
+  setLoading(true);
+  try {
+    const response = await authAPI.loginWallet(address);
+    const { access } = response.data; // Assumindo que retorna { access: token }
+
+    localStorage.setItem('authToken', access);
+    setAuthToken(access);
+    setWalletAddress(address);
+
+    // Carregar dados do usuário
+    await loadUserData();
+
+    return { success: true };
+  } catch (error) {
+    console.error('Erro no login:', error);
+    return { success: false, error: error.response?.data?.error || 'Erro no login' };
+  } finally {
+    setLoading(false);
+  }
+};
+```
+
+PAPEL NO FLUXO: Gerencia tokens JWT, estado da carteira e comunicação com API
+
+================================================================================
+ARQUIVO: arcantria-market/src/services/api.js
+================================================================================
+
+FUNÇÃO: Cliente HTTP configurado para comunicação com o backend Django
+
+CÓDIGO PRINCIPAL:
+```javascript
+// Configurar base URL da API
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+
+// Criar instância do axios com configurações padrão
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Interceptor para adicionar token de autenticação
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Funções de API
+export const authAPI = {
+  loginWallet: (walletAddress) => api.post('/auth/login-wallet/', { wallet_address: walletAddress }),
+  getUser: () => api.get('/users/me/'),
+};
+```
+
+PAPEL NO FLUXO: Faz as chamadas HTTP para os endpoints de autenticação
+
+================================================================================
+ARQUIVO: backend/arcantria_api/accounts/models.py
+================================================================================
+
+FUNÇÃO: Modelo de dados do usuário com suporte a wallet_address
+
+CÓDIGO PRINCIPAL:
+```python
+class User(AbstractBaseUser, PermissionsMixin):
+    USER_ROLES = (("seller","Seller"),("buyer","Buyer"))
+    username = models.CharField(max_length=30, unique=True)
+    email = models.EmailField(unique=True)
+    wallet_address = models.CharField(max_length=42, unique=True, blank=True, null=True)  # Ethereum address
+    role = models.CharField(max_length=10, choices=USER_ROLES, default='buyer')
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+    date_joined = models.DateTimeField(default=timezone.now)
+
+    objects = UserManager()
+
+    USERNAME_FIELD = 'username'
+    REQUIRED_FIELDS = ['email']
+
+    def __str__(self):
+        return self.username
+```
+
+PAPEL NO FLUXO: Armazena os dados do usuário incluindo o endereço da carteira
+
+================================================================================
+ARQUIVO: backend/arcantria_api/accounts/views.py
+================================================================================
+
+FUNÇÃO: Endpoints de autenticação no backend
+
+CÓDIGO PRINCIPAL:
+```python
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def login_wallet(request):
+    wallet_address = request.data.get('wallet_address')
+    if not wallet_address:
+        return Response({'error': 'Wallet address is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Verificar se o usuário já existe
+    user = User.objects.filter(wallet_address=wallet_address).first()
+    if not user:
+        # Criar novo usuário com wallet
+        username = f"user_{wallet_address[:10]}"  # Username baseado no wallet
+        email = f"{wallet_address}@wallet.local"  # Email placeholder
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            wallet_address=wallet_address
+        )
+
+    # Gerar tokens JWT
+    refresh = RefreshToken.for_user(user)
+    return Response({
+        'refresh': str(refresh),
+        'access': str(refresh.access_token),
+        'user': UserSerializer(user).data
+    })
+
+@api_view(['GET'])
+def user_me(request):
+    serializer = UserSerializer(request.user)
+    return Response(serializer.data)
+```
+
+PAPEL NO FLUXO: Processa login via wallet e retorna tokens de autenticação
+
+================================================================================
+ARQUIVO: backend/arcantria_api/accounts/serializers.py
+================================================================================
+
+FUNÇÃO: Serialização dos dados do usuário para JSON
+
+CÓDIGO PRINCIPAL:
+```python
+from rest_framework import serializers
+from .models import User
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'wallet_address', 'role', 'date_joined']
+```
+
+PAPEL NO FLUXO: Converte objetos User para JSON nas respostas da API
+
+================================================================================
+ARQUIVO: backend/arcantria_api/arcantria_api/urls.py
+================================================================================
+
+FUNÇÃO: Configuração das URLs do projeto Django
+
+CÓDIGO PRINCIPAL:
+```python
+# URLs principais
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('api/auth/login-wallet/', login_wallet, name='login_wallet'),
+    path('api/users/me/', user_me, name='user_me'),
+    path('api/balance/', get_balance, name='get_balance'),
+    path('api/', include(router.urls)),
+    path('', home),  # rota inicial
+]
+```
+
+PAPEL NO FLUXO: Registra os endpoints de autenticação nas URLs do projeto
+
+================================================================================
+ARQUIVO: backend/arcantria_api/arcantria_api/settings.py
+================================================================================
+
+FUNÇÃO: Configurações do projeto Django
+
+CÓDIGO PRINCIPAL:
+```python
+AUTH_USER_MODEL = 'accounts.User'
+
+MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',  # precisa vir antes de CommonMiddleware
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+# CORS (para desenvolvimento/teste, permite qualquer origem)
+CORS_ALLOW_ALL_ORIGINS = True
+
+# Django REST Framework (padrão inicial)
+REST_FRAMEWORK = {
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.AllowAny",
+    ],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+        "rest_framework.authentication.BasicAuthentication",
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ],
+}
+```
+
+PAPEL NO FLUXO: Configura autenticação JWT, CORS e modelo de usuário customizado
+
+================================================================================
+FLUXO COMPLETO DE LOGIN:
+================================================================================
+
+1. Usuário clica "Conectar com MetaMask" (Login.js)
+2. Login.js verifica se MetaMask está instalada e conecta
+3. Obtém endereço da carteira via ethers.js
+4. Chama login(address) do WalletContext.js
+5. WalletContext.js faz POST para /api/auth/login-wallet/ via api.js
+6. Backend (views.py) recebe wallet_address
+7. Cria usuário se não existir (models.py)
+8. Gera tokens JWT e retorna
+9. Frontend armazena token no localStorage
+10. Redireciona para marketplace
+
+================================================================================
+POSSÍVEIS PROBLEMAS IDENTIFICADOS:
+================================================================================
+
+1. Backend não está rodando (porta 8000/8001)
+2. MetaMask não instalada ou não desbloqueada
+3. Erro de CORS (configurado para permitir tudo)
+4. Problemas com JWT (tokens não sendo gerados/validados)
+5. Endereço da API incorreto no frontend
+6. Banco de dados MySQL não conectado
+7. Dependências Python/Node não instaladas
+
+================================================================================
+DEPENDÊNCIAS NECESSÁRIAS:
+================================================================================
+
+Frontend:
+- ethers: ^6.15.0
+- axios: ^1.10.0
+- react-router-dom: ^7.7.1
+
+Backend:
+- Django: 5.2.7
+- djangorestframework: 3.16.1
+- djangorestframework-simplejwt: 5.5.1
+- django-cors-headers: 4.9.0
+- mysqlclient: 2.2.7
+- web3: 7.1.13
+
+================================================================================
+CONFIGURAÇÕES DE AMBIENTE:
+================================================================================
+
+Frontend (.env):
+REACT_APP_API_URL=http://localhost:8000/api
+
+Backend (settings.py):
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'arcantria_db',
+        'USER': 'Manthega',
+        'PASSWORD': 'M@nthega4540',
+        'HOST': 'localhost',
+        'PORT': '3306',
+    }
+}
+
+DEBUG = True
+CORS_ALLOW_ALL_ORIGINS = True

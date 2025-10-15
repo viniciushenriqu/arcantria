@@ -1,40 +1,93 @@
-.transactions-container {
-  background-color: #121212;
-  min-height: 100vh;
-  padding: 2rem;
+.transactions-page {
+  display: flex;
+  margin-top: 60px;
+  background-color: #0d0d0d;
   color: white;
-  margin-top: 110px; /* Compensação da topbar (60px) + sub-nav (50px) */
-  width: 100%; /* Garante que cubra toda a largura */
+  min-height: 100vh;
+  font-family: "Poppins", sans-serif;
 }
 
-.transactions-container h2 {
-  margin-bottom: 20px;
-  font-size: 24px;
-  border-bottom: 1px solid #2c2c2c;
-  padding-bottom: 10px;
+.transactions-section {
+  flex: 1;
+  padding: 2rem;
 }
 
-.transactions-container ul {
-  list-style: none;
-  padding: 0;
+.transactions-section h1 {
+  text-align: center;
+  font-size: 32px;
+  margin-bottom: 40px;
+  letter-spacing: 1px;
+  color: #f5f5f5;
 }
 
-.transactions-container li {
-  background-color: #1e1e1e;
-  margin-bottom: 12px;
-  padding: 1rem;
-  border-radius: 6px;
-  font-size: 16px;
+.transactions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.transaction-card-modern {
+  background: linear-gradient(145deg, #1a1a1a, #111);
+  border: 1px solid #292929;
+  border-radius: 16px;
+  padding: 1.5rem;
+  text-align: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
+}
+
+.transaction-card-modern:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 0 25px rgba(255, 215, 0, 0.15);
+  border-color: #ffd700;
+}
+
+.transaction-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  transition: background 0.3s ease;
+  margin-bottom: 15px;
 }
 
-.transactions-container li:hover {
-  background-color: #2a2a2a;
+.transaction-header h3 {
+  font-size: 18px;
+  margin: 0;
+  color: #f5f5f5;
 }
 
-.transactions-container strong {
-  color: #6c63ff;
+.transaction-status {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.transaction-status.concluída {
+  background-color: #4caf50;
+  color: white;
+}
+
+.transaction-status.pendente {
+  background-color: #ff9800;
+  color: white;
+}
+
+.transaction-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.transaction-value {
+  font-size: 20px;
+  font-weight: bold;
+  color: #ffd700;
+}
+
+.transaction-date {
+  font-size: 14px;
+  color: #cfcfcf;
 }

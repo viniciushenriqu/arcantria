@@ -7,8 +7,8 @@
   padding: 0 20px;
   position: fixed;
   top: 0;
-  left: 0; /* Garante que comece na borda esquerda */
-  width: 100vw; /* Usa viewport width para cobrir toda a tela */
+  left: 0;
+  width: 100vw;
   z-index: 1000;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
@@ -20,13 +20,13 @@
 }
 
 .topbar h1 {
-  color: white;
+  color: #FFD700;
   font-size: 24px;
   margin: 0;
 }
 
 .saldo-moeda {
-  color: #6c63ff;
+  color: #FFD700;
   font-weight: bold;
   font-size: 16px;
 }
@@ -54,6 +54,30 @@
   color: #574fd6;
 }
 
+.topbar-right {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  margin-right: 60px; /* adiciona espaçamento da borda direita */
+}
+
+.logout-btn {
+  background-color: transparent;
+  border: 1px solid #FFD700;
+  color: #FFD700;
+  font-size: 14px;
+  font-weight: bold;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.logout-btn:hover {
+  background-color: #FFD700;
+  color: white;
+}
+
 /* Sub-nav (botões abaixo da topbar) */
 .sub-nav {
   background-color: #121212;
@@ -64,10 +88,8 @@
   gap: 80px;
   position: fixed;
   top: 60px;
-  left: 0; /* Garante que comece na borda esquerda */
-  width: 100vw; /* Usa viewport width para cobrir toda a tela */
-  max-width: 1200px;
-  margin: 0 auto;
+  left: 0;
+  width: 100vw;
   z-index: 999;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
@@ -99,9 +121,15 @@
     flex-wrap: wrap;
     padding: 10px;
   }
+
   .sub-btn {
     padding: 8px 15px;
     font-size: 14px;
     margin: 0 5px;
+  }
+
+  .logout-btn {
+    font-size: 13px;
+    padding: 5px 10px;
   }
 }

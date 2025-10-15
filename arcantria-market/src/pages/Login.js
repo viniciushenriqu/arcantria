@@ -1,39 +1,58 @@
 import React, { useState, useContext } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ethers } from 'ethers';
 import { WalletContext } from '../context/WalletContext';
 import './Login.css';
 
 function Login() {
-  const { setWalletAddress } = useContext(WalletContext);
+  const { login, loading } = useContext(WalletContext);
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const connectWallet = async () => {
-    setLoading(true);
     try {
       if (!window.ethereum) {
-        setError('Por favor, instale a MetaMask!');
+        setError('Por favor, instale a MetaMask! Você pode baixá-la em https://metamask.io/');
         return;
       }
 
       const provider = new ethers.BrowserProvider(window.ethereum);
+
+      // Verificar se MetaMask está desbloqueada
+      try {
+        await provider.send('eth_accounts', []);
+      } catch (unlockError) {
+        setError('Por favor, desbloqueie sua carteira MetaMask primeiro.');
+        return;
+      }
+
       const accounts = await provider.send('eth_requestAccounts', []);
+
+      if (accounts.length === 0) {
+        setError('Nenhuma conta conectada. Por favor, conecte uma conta na MetaMask.');
+        return;
+      }
+
       const address = accounts[0];
-      setWalletAddress(address); // Salva no contexto
-      setError(null);
 
-      // Opcional: Envia o endereço ao backend
-      // await axios.post('http://localhost:3001/api/login', { walletAddress: address });
-      console.log('Endereço conectado:', address);
+      // Fazer login via API
+      const result = await login(address);
 
-      // Redireciona para a página Marketplace
-      navigate('/marketplace');
+      if (result.success) {
+        setError(null);
+        navigate('/marketplace');
+      } else {
+        setError(result.error);
+      }
     } catch (err) {
-      setError('Erro ao conectar a carteira: ' + err.message);
-    } finally {
-      setLoading(false);
+      console.error('Erro detalhado:', err);
+      if (err.code === 4001) {
+        setError('Conexão rejeitada pelo usuário. Por favor, aceite a conexão na MetaMask.');
+      } else if (err.code === -32002) {
+        setError('Uma solicitação de conexão já está pendente. Verifique sua MetaMask.');
+      } else {
+        setError('Erro ao conectar a carteira: ' + (err.message || 'Erro desconhecido'));
+      }
     }
   };
 
@@ -52,11 +71,17 @@ function Login() {
           {loading ? 'Conectando...' : 'Conectar com MetaMask'}
         </button>
 
-        {error && <p className="error-text">{error}</p>}
+        <div className="login-help">
+          <p><strong>Como conectar:</strong></p>
+          <ol>
+            <li>Certifique-se de que a MetaMask está instalada</li>
+            <li>Desbloqueie sua carteira na MetaMask</li>
+            <li>Clique em "Conectar com MetaMask"</li>
+            <li>Aprove a conexão quando solicitado</li>
+          </ol>
+        </div>
 
-        <p className="register-text">
-          Não tem conta? <Link to="/register">Cadastre-se</Link>
-        </p>
+        {error && <p className="error-text">{error}</p>}
       </div>
     </div>
   );
